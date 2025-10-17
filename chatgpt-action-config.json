@@ -1,0 +1,217 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "SportsNaukri Job API Middleware",
+    "description": "Optimized API middleware that fetches and filters job listings from SportsNaukri.com. Returns only essential job data (id, title, employer, location, job type, qualification, description summary, and link) for better ChatGPT integration.",
+    "version": "v1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Local development server (replace with your production URL)"
+    }
+  ],
+  "paths": {
+    "/api/jobs": {
+      "get": {
+        "operationId": "getJobs",
+        "summary": "Fetch optimized job listings",
+        "description": "Retrieves and filters job listings from SportsNaukri.com, returning only essential fields. Much lighter payload than direct WordPress API calls.",
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Keyword to search for jobs (e.g. coach, fitness, manager, cricket, football)."
+          },
+          {
+            "name": "slug",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Job slug to fetch a specific job (e.g. sports-manager-bengaluru)."
+          },
+          {
+            "name": "location",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter jobs by location (e.g. Mumbai, Delhi, Bangalore, Chennai)."
+          },
+          {
+            "name": "job_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter jobs by type (e.g. Full Time, Part Time, Contract, Internship)."
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 5,
+              "minimum": 1,
+              "maximum": 20
+            },
+            "description": "Number of jobs to return per page (default 5, max 20)."
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1,
+              "minimum": 1
+            },
+            "description": "Page number for pagination (starts at 1)."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response with optimized job listings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the request was successful"
+                    },
+                    "count": {
+                      "type": "integer",
+                      "description": "Number of jobs returned in this response"
+                    },
+                    "total": {
+                      "type": "integer",
+                      "description": "Total number of jobs matching the query"
+                    },
+                    "totalPages": {
+                      "type": "integer",
+                      "description": "Total number of pages available"
+                    },
+                    "currentPage": {
+                      "type": "integer",
+                      "description": "Current page number"
+                    },
+                    "jobs": {
+                      "type": "array",
+                      "description": "Array of job listings",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "integer",
+                            "description": "Unique job ID"
+                          },
+                          "slug": {
+                            "type": "string",
+                            "description": "Job slug identifier"
+                          },
+                          "title": {
+                            "type": "string",
+                            "description": "Job title (clean text, no HTML)"
+                          },
+                          "employer": {
+                            "type": "string",
+                            "description": "Employer or organization name"
+                          },
+                          "employerLogo": {
+                            "type": "string",
+                            "description": "URL of employer's logo image"
+                          },
+                          "employerUrl": {
+                            "type": "string",
+                            "description": "URL to employer's profile page"
+                          },
+                          "location": {
+                            "type": "string",
+                            "description": "Job location(s)"
+                          },
+                          "jobType": {
+                            "type": "string",
+                            "description": "Employment type (Full Time, Part Time, Contract, etc.)"
+                          },
+                          "category": {
+                            "type": "string",
+                            "description": "Job category (e.g., Management Team, Coaching, etc.)"
+                          },
+                          "qualification": {
+                            "type": "string",
+                            "description": "Required qualification for the job"
+                          },
+                          "experience": {
+                            "type": "string",
+                            "description": "Required experience (e.g., 2 Years, 5+ Years)"
+                          },
+                          "salary": {
+                            "type": "string",
+                            "description": "Salary range or amount"
+                          },
+                          "description": {
+                            "type": "string",
+                            "description": "Brief job description (first 800 characters, no HTML, decoded entities)"
+                          },
+                          "postedDate": {
+                            "type": "string",
+                            "description": "Date when job was posted"
+                          },
+                          "link": {
+                            "type": "string",
+                            "description": "Direct link to the full job posting on SportsNaukri.com"
+                          },
+                          "fullDescriptionUrl": {
+                            "type": "string",
+                            "description": "URL for complete job details (same as link)"
+                          }
+                        },
+                        "required": ["id", "slug", "title", "employer", "location", "link"]
+                      }
+                    }
+                  },
+                  "required": ["success", "count", "jobs"]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Always false for errors"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error type"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
