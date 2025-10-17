@@ -31,6 +31,18 @@ app.use(cors());
 app.use(express.json());
 app.use(limiter); // Apply rate limiting to all requests
 
+// Add response time tracking for monitoring
+app.use((req, res, next) => {
+  const startTime = Date.now();
+  res.on("finish", () => {
+    const duration = Date.now() - startTime;
+    console.log(
+      `${req.method} ${req.path} - ${res.statusCode} - ${duration}ms`
+    );
+  });
+  next();
+});
+
 // Helper function to extract and clean job data
 function cleanJobData(job) {
   try {
@@ -160,11 +172,14 @@ app.get("/", (req, res) => {
   res.json({
     service: "SportsNaukri API Middleware",
     status: "active",
-    version: "1.0.0",
+    version: "1.1.0",
+    environment: process.env.NODE_ENV || "development",
+    rateLimit: `${MAX_REQUESTS_PER_MINUTE} requests/minute`,
     endpoints: {
       jobs: "/api/jobs",
       openapi: "/api/openapi.json",
     },
+    uptime: process.uptime(),
   });
 });
 
