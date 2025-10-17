@@ -197,16 +197,67 @@ app.get("/api/jobs", async (req, res) => {
 
     // Build query parameters for WordPress API
     const params = {
-      per_page: Math.min(parseInt(per_page) || 5, 20), // Max 20 items
+      per_page: Math.min(parseInt(per_page) || 5, 100), // Fetch more to filter client-side
       page: parseInt(page) || 1,
       _fields: "id,slug,title,link,content,metas",
     };
 
-    // Add optional parameters
-    if (search) params.search = search;
+    // Smart search handling
+    let searchKeywords = [];
+    let locationKeywords = [];
+
+    if (search) {
+      // Split search into keywords
+      const keywords = search.toLowerCase().split(/\s+/);
+
+      // Common location keywords
+      const locationWords = [
+        "mumbai",
+        "delhi",
+        "bangalore",
+        "bengaluru",
+        "hyderabad",
+        "chennai",
+        "kolkata",
+        "pune",
+        "ahmedabad",
+        "jaipur",
+        "gurgaon",
+        "gurugram",
+        "noida",
+        "chandigarh",
+        "kochi",
+        "lucknow",
+        "indore",
+        "bhopal",
+        "nagpur",
+        "visakhapatnam",
+        "patna",
+        "vadodara",
+        "goa",
+        "remote",
+      ];
+
+      // Separate location keywords from search keywords
+      keywords.forEach((keyword) => {
+        if (locationWords.includes(keyword)) {
+          locationKeywords.push(keyword);
+        } else {
+          searchKeywords.push(keyword);
+        }
+      });
+
+      // Pass only non-location keywords to WordPress search
+      if (searchKeywords.length > 0) {
+        params.search = searchKeywords.join(" ");
+      }
+    }
+
     if (slug) params.slug = slug;
 
     console.log(`Fetching jobs from WordPress API with params:`, params);
+    console.log(`Search keywords:`, searchKeywords);
+    console.log(`Location keywords:`, locationKeywords);
 
     // Fetch data from WordPress API
     const response = await axios.get(WORDPRESS_API_URL, {
@@ -217,14 +268,22 @@ app.get("/api/jobs", async (req, res) => {
     // Clean and filter the data
     let jobs = response.data.map(cleanJobData).filter((job) => job !== null);
 
-    // Apply client-side filters if needed
+    // Apply client-side filters
+
+    // Filter by location from search query or location parameter
+    const allLocationKeywords = [...locationKeywords];
     if (location) {
-      const locationLower = location.toLowerCase();
-      jobs = jobs.filter((job) =>
-        job.location.toLowerCase().includes(locationLower)
-      );
+      allLocationKeywords.push(location.toLowerCase());
     }
 
+    if (allLocationKeywords.length > 0) {
+      jobs = jobs.filter((job) => {
+        const jobLocation = job.location.toLowerCase();
+        return allLocationKeywords.some((loc) => jobLocation.includes(loc));
+      });
+    }
+
+    // Filter by job type
     if (job_type) {
       const jobTypeLower = job_type.toLowerCase();
       jobs = jobs.filter((job) =>
@@ -232,18 +291,65 @@ app.get("/api/jobs", async (req, res) => {
       );
     }
 
-    // Extract pagination info from headers
-    const totalJobs = response.headers["x-wp-total"] || jobs.length;
-    const totalPages = response.headers["x-wp-totalpages"] || 1;
+    // Additional filtering by search keywords in all fields
+    if (searchKeywords.length > 0) {
+      jobs = jobs.filter((job) => {
+        const searchableText = `
+          ${job.title} 
+          ${job.description} 
+          ${job.employer} 
+          ${job.category} 
+          ${job.qualification}
+        `.toLowerCase();
 
-    res.json({
+        // Check if ALL search keywords appear somewhere in the job
+        return searchKeywords.every((keyword) =>
+          searchableText.includes(keyword)
+        );
+      });
+    }
+
+    // Limit results to requested per_page
+    const requestedPerPage = Math.min(parseInt(per_page) || 5, 20);
+    const paginatedJobs = jobs.slice(0, requestedPerPage);
+
+    // Extract pagination info from headers
+    const totalJobs = jobs.length; // Use filtered count
+    const totalPages = Math.ceil(totalJobs / requestedPerPage);
+
+    const responseData = {
       success: true,
-      count: jobs.length,
-      total: parseInt(totalJobs),
-      totalPages: parseInt(totalPages),
+      count: paginatedJobs.length,
+      total: totalJobs,
+      totalPages: totalPages,
       currentPage: params.page,
-      jobs: jobs,
-    });
+      jobs: paginatedJobs,
+    };
+
+    // Add helpful message if no results
+    if (paginatedJobs.length === 0) {
+      responseData.message = "No jobs found matching your criteria.";
+
+      if (searchKeywords.length > 0 || locationKeywords.length > 0) {
+        responseData.suggestion = "Try:";
+        responseData.tips = [];
+
+        if (searchKeywords.length > 0) {
+          responseData.tips.push(
+            "Using broader search terms (e.g., 'coach' instead of 'football coach')"
+          );
+        }
+        if (locationKeywords.length > 0) {
+          responseData.tips.push(
+            `Searching nearby cities instead of ${locationKeywords.join(", ")}`
+          );
+        }
+        responseData.tips.push("Removing location filters to see all jobs");
+        responseData.tips.push("Checking for similar job titles or categories");
+      }
+    }
+
+    res.json(responseData);
   } catch (error) {
     console.error("Error fetching jobs:", error.message);
 
