@@ -7,7 +7,7 @@
   },
   "servers": [
     {
-      "url": "https://chat-gpt-api-endpoint.vercel.app",
+      "url": "https://sportsnaukri-gpt.vercel.app",
       "description": "Production server"
     }
   ],

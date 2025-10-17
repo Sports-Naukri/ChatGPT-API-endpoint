@@ -238,10 +238,26 @@ app.get("/api/jobs", async (req, res) => {
         "remote",
       ];
 
+      // Broad location terms that should NOT filter (return all jobs)
+      const broadLocationTerms = [
+        "india",
+        "indian",
+        "nationwide",
+        "any location",
+        "anywhere",
+        "all cities",
+      ];
+
       // Separate location keywords from search keywords
       keywords.forEach((keyword) => {
         if (locationWords.includes(keyword)) {
           locationKeywords.push(keyword);
+        } else if (broadLocationTerms.includes(keyword)) {
+          // Broad terms like "india" - don't filter, just remove from search
+          // Do nothing - this allows returning all jobs
+          console.log(
+            `Broad location term detected: "${keyword}" - will not filter by location`
+          );
         } else {
           searchKeywords.push(keyword);
         }
@@ -272,8 +288,25 @@ app.get("/api/jobs", async (req, res) => {
 
     // Filter by location from search query or location parameter
     const allLocationKeywords = [...locationKeywords];
+    const broadLocationTerms = [
+      "india",
+      "indian",
+      "nationwide",
+      "any location",
+      "anywhere",
+      "all cities",
+    ];
+
     if (location) {
-      allLocationKeywords.push(location.toLowerCase());
+      const locationLower = location.toLowerCase();
+      // Check if it's a broad term - if so, don't filter
+      if (!broadLocationTerms.includes(locationLower)) {
+        allLocationKeywords.push(locationLower);
+      } else {
+        console.log(
+          `Broad location parameter detected: "${location}" - will not filter by location`
+        );
+      }
     }
 
     if (allLocationKeywords.length > 0) {
