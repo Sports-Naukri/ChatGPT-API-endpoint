@@ -481,10 +481,15 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`🚀 SportsNaukri API Middleware running on port ${PORT}`);
-  console.log(`📍 API endpoint: http://localhost:${PORT}/api/jobs`);
-  console.log(`📄 OpenAPI spec: http://localhost:${PORT}/api/openapi.json`);
-  console.log(`🔗 Source API: ${WORDPRESS_API_URL}`);
-});
+// Start server (only for local development)
+if (process.env.NODE_ENV !== "production") {
+  app.listen(PORT, () => {
+    console.log(`🚀 SportsNaukri API Middleware running on port ${PORT}`);
+    console.log(`📍 API endpoint: http://localhost:${PORT}/api/jobs`);
+    console.log(`📄 OpenAPI spec: http://localhost:${PORT}/api/openapi.json`);
+    console.log(`🔗 Source API: ${WORDPRESS_API_URL}`);
+  });
+}
+
+// Export for Vercel serverless
+module.exports = app;
