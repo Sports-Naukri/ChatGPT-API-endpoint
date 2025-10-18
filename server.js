@@ -12,6 +12,10 @@ const WORDPRESS_API_URL =
 const MAX_REQUESTS_PER_MINUTE =
   parseInt(process.env.MAX_REQUESTS_PER_MINUTE) || 60;
 
+// Trust proxy - REQUIRED for Vercel/serverless environments
+// This allows express-rate-limit to correctly identify users behind proxies
+app.set("trust proxy", 1);
+
 // Rate limiting configuration
 const limiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
@@ -24,6 +28,9 @@ const limiter = rateLimit({
   },
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  // Skip failed requests (don't count them against the limit)
+  skipFailedRequests: false,
+  skipSuccessfulRequests: false,
 });
 
 // Middleware
@@ -278,7 +285,7 @@ app.get("/api/jobs", async (req, res) => {
     // Fetch data from WordPress API
     const response = await axios.get(WORDPRESS_API_URL, {
       params,
-      timeout: 10000, // 10 second timeout
+      timeout: 30000, // 30 second timeout (increased for slow WordPress responses)
     });
 
     // Clean and filter the data
